@@ -4,6 +4,7 @@ import com.reandroid.jcommand.annotations.ChoiceArg;
 import com.reandroid.jcommand.annotations.CommandOptions;
 import com.reandroid.jcommand.annotations.OptionArg;
 
+import java.io.File;
 import java.util.List;
 
 @CommandOptions(
@@ -32,7 +33,16 @@ public class OptionA {
     public String mOpt1;
 
     @OptionArg(name = "-k", description = "K value (can be multiple)")
-    public List<String> mList;
+    public List<String> mStringList;
+
+    @OptionArg(name = "-q", description = "Q value (can be multiple)")
+    public List<File> mFileList;
+
+    @OptionArg(name = "-r", description = "R value (can be multiple)")
+    public List<Integer> mIntegerList;
+
+    @OptionArg(name = "-s", description = "s value (can be multiple)")
+    public List<SomeEnum> mEnumList;
 
     @ChoiceArg(name = "-l", values = {"aaa", "bbb", "ccc"}, description = "Choose one of:")
     public String mOneOfValue;

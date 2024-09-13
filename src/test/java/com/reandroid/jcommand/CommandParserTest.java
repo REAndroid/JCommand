@@ -7,6 +7,8 @@ import com.reandroid.jcommand.exceptions.UnknownOptionException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+
 public class CommandParserTest {
 
     @Test
@@ -15,14 +17,23 @@ public class CommandParserTest {
                 "-i", "/in/path",
                 "-o", "/out/path",
                 "--force",
+                "-q", "/path4",
                 "-max", "1234",
                 "--option1",
                 "value1",
                 "-k", "item1",
                 "-k", "item2",
+                "-q", "/path2",
                 "-k", "item3",
                 "-l", "bbb",
-                "-m", "three"
+                "-m", "three",
+                "-q", "/path1",
+                "-q", "/path3",
+                "-r", "123",
+                "-r", "456",
+                "-r", "0x1abc",
+                "-s", "four",
+                "-s", "two"
         };
 
         OptionA optionA = CommandParser.parse(OptionA.class, args);
@@ -34,11 +45,24 @@ public class CommandParserTest {
         Assert.assertEquals(Boolean.TRUE, optionA.mForce);
         Assert.assertEquals(1234, optionA.mMaximum);
         Assert.assertEquals("value1", optionA.mOpt1);
-        Assert.assertNotNull(optionA.mList);
-        Assert.assertEquals(3, optionA.mList.size());
-        Assert.assertTrue(optionA.mList.contains("item1"));
-        Assert.assertTrue(optionA.mList.contains("item2"));
-        Assert.assertTrue(optionA.mList.contains("item3"));
+        Assert.assertNotNull(optionA.mStringList);
+        Assert.assertEquals(3, optionA.mStringList.size());
+        Assert.assertTrue(optionA.mStringList.contains("item1"));
+        Assert.assertTrue(optionA.mStringList.contains("item2"));
+        Assert.assertTrue(optionA.mStringList.contains("item3"));
+
+        Assert.assertNotNull(optionA.mFileList);
+        Assert.assertEquals(4, optionA.mFileList.size());
+        Assert.assertEquals(4, optionA.mFileList.toArray(new File[0]).length);
+
+        Assert.assertNotNull(optionA.mIntegerList);
+        Assert.assertEquals(3, optionA.mIntegerList.size());
+        Assert.assertEquals(3, optionA.mIntegerList.toArray(new Integer[0]).length);
+
+        Assert.assertNotNull(optionA.mEnumList);
+        Assert.assertEquals(2, optionA.mEnumList.size());
+        Assert.assertEquals(2, optionA.mEnumList.toArray(new SomeEnum[0]).length);
+
         Assert.assertEquals("bbb", optionA.mOneOfValue);
         Assert.assertEquals(SomeEnum.THREE, optionA.mSomeEnum);
 

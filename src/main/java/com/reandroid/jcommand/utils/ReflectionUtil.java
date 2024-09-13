@@ -21,9 +21,7 @@ import com.reandroid.jcommand.annotations.OptionArg;
 import com.reandroid.jcommand.exceptions.CommandFormatException;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -44,9 +42,79 @@ public class ReflectionUtil {
                 }
                 field.set(obj, collection);
             }
-            collection.add(value);
+            Object converted = createObject(getCollectionEntryType(field), value);
+            collection.add(converted);
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+    private static Object createObject(Class<?> type, String value) {
+        if(type == null || String.class.equals(type)) {
+            return value;
+        }
+        if(type.isEnum()) {
+            Object[] enumConstants = type.getEnumConstants();
+            for (Object o : enumConstants) {
+                Enum<?> e = (Enum<?>) o;
+                if(value.equalsIgnoreCase(e.name())) {
+                    return e;
+                }
+            }
+            throw new CommandFormatException(type, value);
+        }
+        if(File.class.equals(type)) {
+            return new File(value);
+        }
+        if(Integer.class.equals(type)) {
+            try {
+                return Integer.decode(value);
+            } catch (NumberFormatException e1) {
+                throw new CommandFormatException(Integer.class, value);
+            }
+        }
+        if(Long.class.equals(type)) {
+            try {
+                return Long.decode(value);
+            } catch (NumberFormatException e1) {
+                throw new CommandFormatException(Long.class, value);
+            }
+        }
+        if(Double.class.equals(type)) {
+            try {
+                return Double.parseDouble(value);
+            } catch (NumberFormatException e1) {
+                throw new CommandFormatException(Long.class, value);
+            }
+        }
+        if(Boolean.class.equals(type)) {
+            Boolean b = null;
+            if ("true".equalsIgnoreCase(value) || "yes".equalsIgnoreCase(value)) {
+                b = true;
+            } else if ("false".equalsIgnoreCase(value) || "no".equalsIgnoreCase(value)) {
+                b = false;
+            } else {
+                throw new CommandFormatException(Boolean.class, value);
+            }
+            return b;
+        }
+        throw new RuntimeException("Unsupported collection entry type: " + type);
+    }
+    public static Class<?> getCollectionEntryType(Field field) {
+        Type type = field.getAnnotatedType().getType();
+        if(!(type instanceof ParameterizedType)) {
+            return null;
+        }
+        ParameterizedType parameterizedType = (ParameterizedType) type;
+        Type[] args = parameterizedType.getActualTypeArguments();
+        if(args == null || args.length != 1) {
+            return null;
+        }
+        try {
+            return Class.forName(args[0].getTypeName());
+        } catch (Exception ignored) {
+            return null;
         }
     }
     public static void setFile(Object obj, Field field, String value) {
@@ -74,7 +142,7 @@ public class ReflectionUtil {
                 return;
             }
         }
-        throw new RuntimeException("Unknown enum: '" + value + "'");
+        throw new CommandFormatException(type, value);
     }
 
     public static void setDoubleObject(Object obj, Field field, String value) {
