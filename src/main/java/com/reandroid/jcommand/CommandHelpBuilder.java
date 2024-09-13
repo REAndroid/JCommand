@@ -21,26 +21,23 @@ import com.reandroid.jcommand.annotations.LastArgs;
 import com.reandroid.jcommand.annotations.OptionArg;
 import com.reandroid.jcommand.utils.CommandUtil;
 import com.reandroid.jcommand.utils.ReflectionUtil;
+import com.reandroid.jcommand.utils.SpreadSheet;
+import com.reandroid.jcommand.utils.TwoColumnTable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CommandHelpBuilder {
 
     private final CommandStringResource stringResource;
+    private final TwoColumnTable twoColumnTable;
     private final CommandOptions commandOptions;
     private final List<OptionArg> optionArgList;
     private final List<ChoiceArg> choiceArgList;
     private final LastArgs lastArgs;
 
-    private int maxWidth = 100;
-    private StringBuilder builder;
-    private String tab2 = "   ";
-
     public CommandHelpBuilder(Class<?> clazz, CommandStringResource stringResource) {
         this.stringResource = stringResource;
+        this.twoColumnTable = new TwoColumnTable();
         this.commandOptions = clazz.getAnnotation(CommandOptions.class);
         this.optionArgList = ReflectionUtil.listOptionArgs(clazz);
         this.choiceArgList = ReflectionUtil.listChoiceArgs(clazz);
@@ -51,31 +48,39 @@ public class CommandHelpBuilder {
     }
 
     public void setMaxWidth(int maxWidth) {
-        this.maxWidth = maxWidth;
+        twoColumnTable.setMaxWidth(maxWidth);
     }
     public void setTab2(String tab2) {
-        this.tab2 = tab2;
+        twoColumnTable.setTab2(tab2);
+    }
+    public void setColumnSeparator(String columnSeparator) {
+        twoColumnTable.setColumnSeparator(columnSeparator);
+    }
+    public void setDrawBorder(boolean headerSeparators) {
+        twoColumnTable.setDrawBorder(headerSeparators);
     }
 
     public String build() {
-        this.builder = new StringBuilder();
+        return buildTable().toString();
+    }
+    public SpreadSheet buildTable() {
+        twoColumnTable.clear();
         appendHeading();
         appendUsage();
         appendOptionArgs(getOptionArgList(), CommandStrings.title_options);
         appendChoiceArgs();
         appendOptionArgs(getFlagList(), CommandStrings.title_flags);
         appendExamples();
-        return builder.toString();
+        twoColumnTable.addSeparator();
+        return twoColumnTable.buildTable();
     }
     private void appendOptionArgs(List<OptionArg> optionArgList, String title) {
         if(optionArgList.isEmpty()) {
             return;
         }
-        newLine();
-        builder.append(stringResource.getString(title));
-        newLine();
+        sortOptionArgList(optionArgList);
+        twoColumnTable.addMergedRow(stringResource.getString(title));
         int length = optionArgList.size();
-        String[][] table = new String[length][2];
         for(int i = 0; i < length; i++) {
             OptionArg optionArg = optionArgList.get(i);
             StringBuilder name = new StringBuilder();
@@ -84,24 +89,18 @@ public class CommandHelpBuilder {
                 name.append(" | ");
                 name.append(l);
             }
-            String[] row = table[i];
-            row[0] = name.toString();
-            row[1] = stringResource.getString(optionArg.description());
+            twoColumnTable.addRow(name.toString(), stringResource.getString(optionArg.description()));
         }
-        CommandUtil.printTwoColumns(builder, tab2, maxWidth, table);
     }
     private void appendChoiceArgs() {
         List<ChoiceArg> choiceArgList = this.choiceArgList;
         if(choiceArgList.isEmpty()) {
             return;
         }
-        newLine();
         if(optionArgList.isEmpty()) {
-            builder.append(stringResource.getString(CommandStrings.title_options));
-            newLine();
+            twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_options));
         }
         int length = choiceArgList.size();
-        String[][] table = new String[length][2];
         for(int i = 0; i < length; i++) {
             ChoiceArg choiceArg = choiceArgList.get(i);
             StringBuilder name = new StringBuilder();
@@ -110,13 +109,10 @@ public class CommandHelpBuilder {
                 name.append(" | ");
                 name.append(l);
             }
-            String[] row = table[i];
-            row[0] = name.toString();
             String description = stringResource.getString(choiceArg.description()) + "\n"
                     + CommandUtil.asString(choiceArg.values());
-            row[1] = description;
+            twoColumnTable.addRow(name.toString(), description);
         }
-        CommandUtil.printTwoColumns(builder, tab2, maxWidth, table);
     }
     private void appendExamples() {
         CommandOptions commandOptions = this.commandOptions;
@@ -128,16 +124,12 @@ public class CommandHelpBuilder {
         if(length == 0) {
             return;
         }
-        newLine();
-        builder.append(stringResource.getString(CommandStrings.title_example));
-        newLine();
-        String[][] table = new String[length][2];
+        twoColumnTable.addSeparator();
+        twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_example));
         for(int i = 0; i < length; i++) {
-            String[] row = table[i];
-            row[0] = (i + 1) + ")";
-            row[1] = stringResource.getString(examples[i]);
+            String col1 = (i + 1) + ")  " + stringResource.getString(examples[i]);
+            twoColumnTable.addMergedRowTabbed(col1);
         }
-        CommandUtil.printTwoColumns(builder, tab2, maxWidth * 2, table);
     }
     private void appendUsage() {
         CommandOptions options = this.commandOptions;
@@ -148,26 +140,18 @@ public class CommandHelpBuilder {
         if(CommandUtil.isEmpty(usage)) {
             return;
         }
-        newLine();
-        builder.append(stringResource.getString(CommandStrings.title_usage));
-        newLine();
-        builder.append(tab2);
-        builder.append(stringResource.getString(options.usage()));
+        twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_usage));
+        twoColumnTable.addMergedRowTabbed(stringResource.getString(options.usage()));
+        twoColumnTable.addSeparator();
     }
     private void appendHeading() {
+        twoColumnTable.addFirstSeparator();
         CommandOptions options = this.commandOptions;
         if(options == null) {
             return;
         }
-        newLine();
-        builder.append(stringResource.getString(options.description()));
-    }
-    private void newLine() {
-        int length = builder.length();
-        if(length == 0 || builder.charAt(length - 1) == '\n') {
-            return;
-        }
-        builder.append("\n");
+        twoColumnTable.addMergedRow(stringResource.getString(options.description()));
+        twoColumnTable.addSeparator();
     }
 
     private List<OptionArg> getOptionArgList() {
@@ -188,12 +172,20 @@ public class CommandHelpBuilder {
         }
         return results;
     }
+    private static void sortOptionArgList(List<OptionArg> optionArgList) {
+        optionArgList.sort(new Comparator<OptionArg>() {
+            @Override
+            public int compare(OptionArg arg1, OptionArg arg2) {
+                return arg1.name().compareTo(arg2.name());
+            }
+        });
+    }
     private static CommandStringResource defaultStringResource() {
         Map<String, String> map = new HashMap<>();
         map.put(CommandStrings.title_options, "Options:");
         map.put(CommandStrings.title_flags, "Flags:");
         map.put(CommandStrings.title_usage, "Usage:");
-        map.put(CommandStrings.title_example, "Examples");
+        map.put(CommandStrings.title_example, "Examples:");
         return resourceName -> {
             String str = map.get(resourceName);
             if(str == null) {
