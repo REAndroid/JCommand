@@ -15,25 +15,16 @@
  */
 package com.reandroid.jcommand.exceptions;
 
+import com.reandroid.jcommand.CommandStrings;
+
 public class CommandFormatException extends CommandException {
 
-    private final Class<?> type;
-
     public CommandFormatException(Class<?> type, String message) {
-        super(message);
-        this.type = type;
+        super(CommandStrings.invalid_type_format, type.getSimpleName(), message);
     }
 
-    public Class<?> getType() {
-        return type;
-    }
     @Override
     public String getMessage() {
         return format("Invalid <%s> string: '%s'");
-    }
-
-    @Override
-    public String format(String format) {
-        return String.format(format, getType().getSimpleName(), getRawMessage());
     }
 }

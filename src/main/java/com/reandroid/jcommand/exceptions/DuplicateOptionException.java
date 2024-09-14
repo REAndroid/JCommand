@@ -15,10 +15,12 @@
  */
 package com.reandroid.jcommand.exceptions;
 
+import com.reandroid.jcommand.CommandStrings;
+
 public class DuplicateOptionException extends CommandException {
 
     public DuplicateOptionException(String message) {
-        super(message);
+        super(CommandStrings.duplicate_option_exception, message);
     }
 
     @Override

@@ -15,10 +15,12 @@
  */
 package com.reandroid.jcommand.exceptions;
 
+import com.reandroid.jcommand.CommandStrings;
+
 public class UnknownOptionException extends CommandException {
 
     public UnknownOptionException(String message) {
-        super(message);
+        super(CommandStrings.unknown_option_exception, message);
     }
 
     @Override

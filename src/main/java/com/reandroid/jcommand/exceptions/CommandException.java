@@ -15,19 +15,30 @@
  */
 package com.reandroid.jcommand.exceptions;
 
+import com.reandroid.jcommand.CommandStringResource;
+
 public class CommandException extends RuntimeException {
 
-    private final String rawMessage;
+    private final String format;
+    private final Object[] values;
 
-    public CommandException(String message) {
-        super(message);
-        this.rawMessage = message;
+    public CommandException(String format, Object ... values) {
+        super(format);
+        this.format = format;
+        this.values = values;
     }
 
-    public String getRawMessage() {
-        return rawMessage;
+    public String getMessage(CommandStringResource stringResource) {
+        return format(stringResource.getString(getFormat()));
+    }
+
+    public String getFormat() {
+        return format;
+    }
+    public Object[] getValues() {
+        return values;
     }
     public String format(String format) {
-        return String.format(format, getRawMessage());
+        return String.format(format, getValues());
     }
 }

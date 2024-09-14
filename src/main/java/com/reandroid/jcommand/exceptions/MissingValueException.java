@@ -15,14 +15,16 @@
  */
 package com.reandroid.jcommand.exceptions;
 
+import com.reandroid.jcommand.CommandStrings;
+
 public class MissingValueException extends CommandException {
 
     public MissingValueException(String message) {
-        super(message);
+        super(CommandStrings.missing_value_exception, message);
     }
 
     @Override
     public String getMessage() {
-        return "Missing value for: '" + getRawMessage() + "'";
+        return format("Missing value for: '%s'");
     }
 }
