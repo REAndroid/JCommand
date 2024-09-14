@@ -71,6 +71,16 @@ public class SpreadSheet implements Iterable<SpreadSheet.Row> {
         }
         return result;
     }
+    public int getMergedCellsWidth() {
+        int result = 0;
+        for (Row row : this) {
+            int width = row.getMergedCellsWidth();
+            if(width > result) {
+                result = width;
+            }
+        }
+        return result;
+    }
     public void setIndent(int columnIndex, int indent) {
         for (Row row : this) {
             row.setIndent(columnIndex, indent);
@@ -268,6 +278,18 @@ public class SpreadSheet implements Iterable<SpreadSheet.Row> {
                 result += cell.getPrintWidth();
             }
             return result;
+        }
+        public int getMergedCellsWidth() {
+            for (Cell cell : this) {
+                if(cell instanceof MergedCells) {
+                    MergedCells mergedCells = (MergedCells) cell;
+                    Cell first = mergedCells.getFirst();
+                    if (first != null) {
+                        return first.itemWidth();
+                    }
+                }
+            }
+            return 0;
         }
         public int getColumnPrintWidth(int columnIndex) {
             Cell cell = getCell(columnIndex);

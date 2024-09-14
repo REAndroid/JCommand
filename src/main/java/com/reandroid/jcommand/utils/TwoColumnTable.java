@@ -62,9 +62,13 @@ public class TwoColumnTable {
         if (maxWidth <= 0) {
             maxWidth = 1;
         }
+        int mergedCellsWidth = spreadSheet.getMergedCellsWidth() - firstWidth;
         int width = spreadSheet.fitColumnWidth(1);
         int diff = spreadSheet.getColumnPrintWidth(1) - width;
         maxWidth = maxWidth - diff;
+        if(mergedCellsWidth > width) {
+            width = mergedCellsWidth;
+        }
 
         if(width > maxWidth) {
             width = maxWidth;
