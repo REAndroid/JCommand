@@ -771,20 +771,15 @@ public class SpreadSheet implements Iterable<SpreadSheet.Row> {
             currentWidth = -length;
         }
         StringBuilder lineBuilder = new StringBuilder();
-        boolean widthSplit = false;
         for (int i = 0; i < length; i++) {
             char ch = line.charAt(i);
-            if(!(widthSplit && ch == ' ')) {
-                lineBuilder.append(ch);
-            }
+            lineBuilder.append(ch);
             currentWidth ++;
-            widthSplit = (currentWidth == width);
-            if(ch == '\n' || widthSplit) {
+            if(ch == '\n' || currentWidth == width) {
                 count ++;
                 currentWidth = 0;
-                widthSplit = (ch != '\n');
-                if(widthSplit) {
-                    lineBuilder.append('\n');
+                if(ch != '\n') {
+                    currentWidth = placeNewline(lineBuilder, width);
                 }
             }
         }
@@ -807,6 +802,26 @@ public class SpreadSheet implements Iterable<SpreadSheet.Row> {
             results[index] = builder.toString();
         }
         return results;
+    }
+    private static int placeNewline(StringBuilder builder, int width) {
+        int length = builder.length();
+        int half = width / 2;
+        if(half >= length) {
+            return 0;
+        }
+        half = length - half;
+        for (int i = length - 1; i > half; i--) {
+            char ch = builder.charAt(i);
+            if (ch == '\n') {
+                return 0;
+            }
+            if (ch == ' ' || ch == '\t') {
+                builder.deleteCharAt(i);
+                builder.insert(i, '\n');
+                return length - i;
+            }
+        }
+        return 0;
     }
     public static String fillSpace(int amount) {
         return fill(' ', amount);
