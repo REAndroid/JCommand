@@ -15,183 +15,152 @@
  */
 package com.reandroid.jcommand;
 
-import com.reandroid.jcommand.annotations.ChoiceArg;
 import com.reandroid.jcommand.annotations.CommandOptions;
-import com.reandroid.jcommand.annotations.LastArgs;
-import com.reandroid.jcommand.annotations.OptionArg;
-import com.reandroid.jcommand.utils.CommandUtil;
+import com.reandroid.jcommand.annotations.MainCommand;
+import com.reandroid.jcommand.annotations.OtherOption;
 import com.reandroid.jcommand.utils.ReflectionUtil;
 import com.reandroid.jcommand.utils.SpreadSheet;
 import com.reandroid.jcommand.utils.TwoColumnTable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class CommandHelpBuilder {
+public class CommandHelpBuilder extends HelpBuilder {
 
-    private final CommandStringResource stringResource;
-    private final TwoColumnTable twoColumnTable;
-    private final CommandOptions commandOptions;
-    private final List<OptionArg> optionArgList;
-    private final List<ChoiceArg> choiceArgList;
-    private final LastArgs lastArgs;
+    private final Class<?> mainCommandClass;
+    private MainCommand mainCommand;
 
-    public CommandHelpBuilder(Class<?> clazz, CommandStringResource stringResource) {
-        this.stringResource = stringResource;
-        this.twoColumnTable = new TwoColumnTable();
-        this.commandOptions = clazz.getAnnotation(CommandOptions.class);
-        this.optionArgList = ReflectionUtil.listOptionArgs(clazz);
-        this.choiceArgList = ReflectionUtil.listChoiceArgs(clazz);
-        this.lastArgs = ReflectionUtil.getLastArgs(clazz);
+    public CommandHelpBuilder(CommandStringResource stringResource, Class<?> mainCommandClass) {
+        super(stringResource);
+        if (mainCommandClass == null) {
+            throw new NullPointerException("Null MainCommand");
+        }
+        this.mainCommandClass = mainCommandClass;
     }
-    public CommandHelpBuilder(Class<?> clazz) {
-        this(clazz, defaultStringResource());
+    public CommandHelpBuilder(Class<?> mainCommandClass) {
+        this(null, mainCommandClass);
     }
 
-    public void setMaxWidth(int maxWidth) {
-        twoColumnTable.setMaxWidth(maxWidth);
-    }
-    public void setTab2(String tab2) {
-        twoColumnTable.setTab2(tab2);
-    }
-    public void setColumnSeparator(String columnSeparator) {
-        twoColumnTable.setColumnSeparator(columnSeparator);
-    }
-    public void setDrawBorder(boolean headerSeparators) {
-        twoColumnTable.setDrawBorder(headerSeparators);
-    }
-
-    public String build() {
-        return buildTable().toString();
-    }
+    @Override
     public SpreadSheet buildTable() {
-        twoColumnTable.clear();
-        appendHeading();
-        appendUsage();
-        appendOptionArgs(getOptionArgList(), CommandStrings.title_options);
-        appendChoiceArgs();
-        appendOptionArgs(getFlagList(), CommandStrings.title_flags);
-        appendExamples();
+
+        reset();
+        appendLines(false, getMainCommand().headers());
+        appendUsageLines();
+        appendCommandOptions();
+        appendOtherOptions();
+        appendFooters();
+
+        TwoColumnTable twoColumnTable = getTable();
         twoColumnTable.addSeparator();
+
         return twoColumnTable.buildTable();
     }
-    private void appendOptionArgs(List<OptionArg> optionArgList, String title) {
-        if(optionArgList.isEmpty()) {
-            return;
-        }
-        sortOptionArgList(optionArgList);
-        twoColumnTable.addMergedRow(stringResource.getString(title));
-        int length = optionArgList.size();
-        for(int i = 0; i < length; i++) {
-            OptionArg optionArg = optionArgList.get(i);
-            StringBuilder name = new StringBuilder();
-            name.append(optionArg.name());
-            for(String l : optionArg.alternates()) {
-                name.append(" | ");
-                name.append(l);
+
+    public MainCommand getMainCommand() {
+        MainCommand mainCommand = this.mainCommand;
+        if(mainCommand == null) {
+            mainCommand = mainCommandClass.getAnnotation(MainCommand.class);
+            if(mainCommand == null) {
+                throw new RuntimeException("Class not annotated with MainCommand: '"
+                        + mainCommandClass + "'");
             }
-            twoColumnTable.addRow(name.toString(), stringResource.getString(optionArg.description()));
+            this.mainCommand = mainCommand;
         }
+        return mainCommand;
     }
-    private void appendChoiceArgs() {
-        List<ChoiceArg> choiceArgList = this.choiceArgList;
-        if(choiceArgList.isEmpty()) {
-            return;
-        }
-        if(optionArgList.isEmpty()) {
-            twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_options));
-        }
-        int length = choiceArgList.size();
-        for(int i = 0; i < length; i++) {
-            ChoiceArg choiceArg = choiceArgList.get(i);
-            StringBuilder name = new StringBuilder();
-            name.append(choiceArg.name());
-            for(String l : choiceArg.alternates()) {
-                name.append(" | ");
-                name.append(l);
-            }
-            String description = stringResource.getString(choiceArg.description()) + "\n"
-                    + CommandUtil.asString(choiceArg.values());
-            twoColumnTable.addRow(name.toString(), description);
-        }
-    }
-    private void appendExamples() {
-        CommandOptions commandOptions = this.commandOptions;
-        if(commandOptions == null) {
-            return;
-        }
-        String[] examples = commandOptions.examples();
-        int length = examples.length;
-        if(length == 0) {
-            return;
+
+    private void appendCommandOptions() {
+        List<CommandOptions> commandOptionsList = getCommandOptions();
+
+        TwoColumnTable twoColumnTable = getTable();
+
+        twoColumnTable.addMergedRow(getStringResource()
+                .getString(CommandStrings.title_commands));
+
+        for(CommandOptions options : commandOptionsList) {
+            appendCommandOptions(options);
         }
         twoColumnTable.addSeparator();
-        twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_example));
-        for(int i = 0; i < length; i++) {
-            String col1 = (i + 1) + ")  " + stringResource.getString(examples[i]);
-            twoColumnTable.addMergedRowTabbed(col1);
-        }
     }
-    private void appendUsage() {
-        CommandOptions options = this.commandOptions;
-        if(options == null) {
+    private void appendCommandOptions(CommandOptions options) {
+        TwoColumnTable twoColumnTable = getTable();
+        StringBuilder name = new StringBuilder();
+        name.append(options.name());
+        String[] alternates = options.alternates();
+        for(String alt : alternates) {
+            name.append(" | ");
+            name.append(alt);
+        }
+        twoColumnTable.addRow(name.toString(),
+                getStringResource().getString(options.description()));
+    }
+
+    private void appendOtherOptions() {
+        List<OtherOption> otherOptionList = getOtherOptions();
+        if(otherOptionList.isEmpty()) {
             return;
         }
-        String usage = options.usage();
-        if(CommandUtil.isEmpty(usage)) {
+        TwoColumnTable twoColumnTable = getTable();
+
+        twoColumnTable.addMergedRow(getStringResource()
+                .getString(CommandStrings.title_other_options));
+
+        for(OtherOption options : otherOptionList) {
+            appendOtherOption(options);
+        }
+        twoColumnTable.addSeparator();
+    }
+    private void appendOtherOption(OtherOption options) {
+        TwoColumnTable twoColumnTable = getTable();
+        StringBuilder nameBuilder = new StringBuilder();
+        String[] names = options.names();
+        int length = names.length;
+        for(int i = 0; i < length; i++) {
+            if(i != 0) {
+                nameBuilder.append(" | ");
+            }
+            nameBuilder.append(names[i]);
+        }
+        twoColumnTable.addRow(nameBuilder.toString(),
+                getStringResource().getString(options.description()));
+    }
+    private void appendUsageLines() {
+        MainCommand mainCommand = getMainCommand();
+        if(mainCommand == null) {
             return;
         }
+        String[] usageLines = mainCommand.usages();
+        if(usageLines.length == 0) {
+            return;
+        }
+        CommandStringResource stringResource = getStringResource();
+        TwoColumnTable twoColumnTable = getTable();
+
+        twoColumnTable.addSeparator();
+
         twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_usage));
-        twoColumnTable.addMergedRowTabbed(stringResource.getString(options.usage()));
-        twoColumnTable.addSeparator();
-    }
-    private void appendHeading() {
-        twoColumnTable.addFirstSeparator();
-        CommandOptions options = this.commandOptions;
-        if(options == null) {
-            return;
+
+        for(String line : usageLines) {
+            twoColumnTable.addMergedRowTabbed(stringResource.getString(line));
         }
-        twoColumnTable.addMergedRow(stringResource.getString(options.description()));
         twoColumnTable.addSeparator();
     }
 
-    private List<OptionArg> getOptionArgList() {
-        List<OptionArg> results = new ArrayList<>();
-        for(OptionArg optionArg : this.optionArgList) {
-            if(!optionArg.flag()) {
-                results.add(optionArg);
+    public List<CommandOptions> getCommandOptions() {
+        List<CommandOptions> results = new ArrayList<>();
+        Class<?>[] optionClasses = getMainCommand().options();
+        for(Class<?> clazz : optionClasses) {
+            CommandOptions commandOptions = clazz.getAnnotation(CommandOptions.class);
+            if(commandOptions == null) {
+                throw new IllegalArgumentException("Invalid option class: '"
+                        + clazz + "', should annotate CommandOptions");
             }
+            results.add(commandOptions);
         }
         return results;
     }
-    private List<OptionArg> getFlagList() {
-        List<OptionArg> results = new ArrayList<>();
-        for(OptionArg optionArg : this.optionArgList) {
-            if(optionArg.flag()) {
-                results.add(optionArg);
-            }
-        }
-        return results;
-    }
-    private static void sortOptionArgList(List<OptionArg> optionArgList) {
-        optionArgList.sort(new Comparator<OptionArg>() {
-            @Override
-            public int compare(OptionArg arg1, OptionArg arg2) {
-                return arg1.name().compareTo(arg2.name());
-            }
-        });
-    }
-    private static CommandStringResource defaultStringResource() {
-        Map<String, String> map = new HashMap<>();
-        map.put(CommandStrings.title_options, "Options:");
-        map.put(CommandStrings.title_flags, "Flags:");
-        map.put(CommandStrings.title_usage, "Usage:");
-        map.put(CommandStrings.title_example, "Examples:");
-        return resourceName -> {
-            String str = map.get(resourceName);
-            if(str == null) {
-                str = resourceName;
-            }
-            return str;
-        };
+    public List<OtherOption> getOtherOptions() {
+        return ReflectionUtil.listOtherOptions(mainCommandClass);
     }
 }

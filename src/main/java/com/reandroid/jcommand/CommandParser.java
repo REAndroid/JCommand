@@ -15,210 +15,114 @@
  */
 package com.reandroid.jcommand;
 
-import com.reandroid.jcommand.annotations.ChoiceArg;
-import com.reandroid.jcommand.annotations.LastArgs;
-import com.reandroid.jcommand.annotations.OptionArg;
-import com.reandroid.jcommand.exceptions.DuplicateOptionException;
-import com.reandroid.jcommand.exceptions.MissingValueException;
-import com.reandroid.jcommand.exceptions.UnknownOptionException;
-import com.reandroid.jcommand.utils.CommandUtil;
+import com.reandroid.jcommand.annotations.CommandOptions;
+import com.reandroid.jcommand.annotations.MainCommand;
+import com.reandroid.jcommand.annotations.OnOptionSelected;
+import com.reandroid.jcommand.annotations.OtherOption;
+import com.reandroid.jcommand.exceptions.CommandException;
 import com.reandroid.jcommand.utils.ReflectionUtil;
 
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.*;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.List;
 
 public class CommandParser {
 
-    private final String[] mArgs;
-    private Object mObj;
-    private final Map<String, Field> optionFieldsMap;
-    private final Map<String, Field> choiceOptionFieldsMap;
-    private Field mLastArgs;
-    private final Set<Field> mParsedFields;
-    private int mIndex;
+    private final Class<?> mainCommandClass;
 
-    public CommandParser(String[] args) {
-        this.mArgs = args;
-        this.optionFieldsMap = new HashMap<>();
-        this.choiceOptionFieldsMap = new HashMap<>();
-        this.mParsedFields = new HashSet<>();
+    public CommandParser(Class<?> mainCommandClass) {
+        this.mainCommandClass = mainCommandClass;
     }
-    public <T> T parse(Class<T> type) {
-        T obj = ReflectionUtil.createNew(type);
-        parse(obj);
-        return obj;
-    }
-    public void parse(Object obj) {
-        this.mObj = obj;
-        mapFields(obj.getClass());
-        parseArgs();
-    }
-    private void parseArgs() {
-        String[] args = this.mArgs;
-        int length = args.length;
-        for(mIndex = 0; mIndex < length; mIndex++) {
-            String arg = args[mIndex];
-            Field field = optionFieldsMap.get(arg);
-            if(field == null) {
-                field = choiceOptionFieldsMap.get(arg);
-                if(field != null) {
-                    parseChoiceOptionField(field);
-                    continue;
-                }
+
+    public void parse(Object callback, String ... args) {
+        if(args == null || args.length == 0) {
+            throw new CommandException(CommandStrings.empty_command_args_exception);
+        }
+        String command = args[0];
+        Method otherOptionMethod = getOtherOptionMethod(command, callback == null);
+        if(otherOptionMethod != null) {
+            try {
+                otherOptionMethod.setAccessible(true);
+                otherOptionMethod.invoke(callback);
+                return;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-            if(field == null) {
-                if(mLastArgs == null) {
-                    throw new UnknownOptionException(arg);
-                }
-                parseLastArgs();
-                continue;
+        }
+        Class<?> optionClass = getOptionClass(command);
+        if(optionClass != null) {
+            int length = args.length;
+            String[] subArgs = new String[length - 1];
+            for(int i = 1; i < length; i++) {
+                subArgs[i - 1] = args[i];
             }
-            parseOptionField(field);
-        }
-    }
-    private void addParsed(Field field, String arg) {
-        if(mParsedFields.contains(field)) {
-            if(!ReflectionUtil.isInstanceClass(field.getType(), Collection.class)) {
-                throw new DuplicateOptionException(arg);
-            }
+            parseSubCommand(callback, optionClass, subArgs);
         } else {
-            mParsedFields.add(field);
+            throw new CommandException(CommandStrings.unknown_command_exception, command);
         }
     }
-    private void parseOptionField(Field field) {
-        OptionArg optionArg = field.getAnnotation(OptionArg.class);
-        addParsed(field, optionArg.name());
-        field.setAccessible(true);
-        if(optionArg.flag()) {
-            ReflectionUtil.setBoolean(mObj, field, true);
-            return;
-        }
-        mIndex ++;
-        if(mIndex >= mArgs.length) {
-            throw new MissingValueException(mArgs[mIndex - 1]);
-        }
-        String arg = mArgs[mIndex];
-        Class<?> type = field.getType();
-        Object obj = this.mObj;
-        if(ReflectionUtil.isInstanceClass(type, Collection.class)) {
-            ReflectionUtil.setCollection(obj, field, arg);
-            return;
-        }
-        if (type == String.class) {
-            ReflectionUtil.setObject(obj, field, arg);
-        } else if (type == int.class) {
-            ReflectionUtil.setInt(obj, field, arg);
-        } else if (type == Integer.class) {
-            ReflectionUtil.setIntObject(obj, field, arg);
-        } else if (type == long.class) {
-            ReflectionUtil.setLong(obj, field, arg);
-        } else if (type == Long.class) {
-            ReflectionUtil.setLongObject(obj, field, arg);
-        } else if (type == double.class) {
-            ReflectionUtil.setDouble(obj, field, arg);
-        } else if (type == Double.class) {
-            ReflectionUtil.setDoubleObject(obj, field, arg);
-        } else if (type == boolean.class) {
-            ReflectionUtil.setBoolean(obj, field, arg);
-        } else if (type == Boolean.class) {
-            ReflectionUtil.setBooleanObject(obj, field, arg);
-        } else if (type == File.class) {
-            ReflectionUtil.setFile(obj, field, arg);
-        } else {
-            throw new RuntimeException("Unsupported field type: " + field);
-        }
-    }
-    private void parseChoiceOptionField(Field field) {
-        ChoiceArg choiceArg = field.getAnnotation(ChoiceArg.class);
-        addParsed(field, choiceArg.name());
-        field.setAccessible(true);
-        mIndex ++;
-        if(mIndex >= mArgs.length) {
-            throw new MissingValueException(mArgs[mIndex - 1]);
-        }
-        String arg = mArgs[mIndex];
-        if (!CommandUtil.containsIgnoreCase(choiceArg.values(), arg)) {
-            throw new UnknownOptionException(arg);
-        }
-        Class<?> type = field.getType();
-        if(String.class.equals(type)) {
-            ReflectionUtil.setObject(mObj, field, arg);
-        } else if (type.isEnum()) {
-            ReflectionUtil.setEnum(mObj, field, arg);
-        } else {
-            throw new RuntimeException("Unsupported choice field type: " + field);
-        }
-    }
-    @SuppressWarnings("unchecked")
-    private void parseLastArgs() {
-        Field field = this.mLastArgs;
-        field.setAccessible(true);
-        Collection<Object> collection;
+    private void parseSubCommand(Object callback, Class<?> optionClass, String[] args) {
+        Object obj = SubCommandParser.parse(optionClass, args);
+        boolean empty = args.length == 0;
+        Method onOptionSelectedMethod = getOnOptionSelectedMethod(callback == null);
         try {
-            collection = (Collection<Object>) field.get(mObj);
-            if(collection == null) {
-                Class<?> type = field.getType();
-                if (ReflectionUtil.isInstanceClass(type, List.class)) {
-                    collection = new ArrayList<>();
-                } else {
-                    collection = new HashSet<>();
-                }
-                field.set(mObj, collection);
-            }
+            onOptionSelectedMethod.setAccessible(true);
+            onOptionSelectedMethod.invoke(callback, obj, empty);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        mIndex ++;
-        while (mIndex < mArgs.length) {
-            collection.add(mArgs[mIndex]);
-            mIndex ++;
-        }
     }
-    private void mapFields(Class<?> type) {
-        List<Field> fieldList = ReflectionUtil.listInstanceFields(type);
-        Map<String, Field> optionFieldsMap = this.optionFieldsMap;
-        Map<String, Field> choiceOptionFieldsMap = this.choiceOptionFieldsMap;
-        for(Field field : fieldList) {
-            List<String> nameList = ReflectionUtil.listNames(field);
-            for(String name : nameList) {
-                Field exist = getField(name);
-                if(exist != null) {
-                    throw new RuntimeException("Duplicate fields: '"
-                            + exist + "', '" + field + "'");
-                }
-                if(field.getAnnotation(OptionArg.class) != null) {
-                    optionFieldsMap.put(name, field);
-                }
-                if(field.getAnnotation(ChoiceArg.class) != null) {
-                    choiceOptionFieldsMap.put(name, field);
+    private Class<?> getOptionClass(String command) {
+        MainCommand mainCommand = mainCommandClass.getAnnotation(MainCommand.class);
+        Class<?>[] classes = mainCommand.options();
+        for(Class<?> clazz : classes) {
+            CommandOptions commandOptions = clazz.getAnnotation(CommandOptions.class);
+            if(commandOptions.name().equals(command)) {
+                return clazz;
+            }
+            String[] names = commandOptions.alternates();
+            for(String name : names) {
+                if(name.equals(command)) {
+                    return clazz;
                 }
             }
-            if(nameList.isEmpty()) {
-                LastArgs lastArgs = field.getAnnotation(LastArgs.class);
-                if(lastArgs != null) {
-                    if(mLastArgs != null) {
-                        throw new RuntimeException("Duplicate LastArgs: '"
-                                + mLastArgs + "', '" + field + "'");
+        }
+        return null;
+    }
+
+    private Method getOtherOptionMethod(String command, boolean is_static) {
+        List<Method> methodList = ReflectionUtil.listMethods(mainCommandClass);
+        for(Method method : methodList) {
+            boolean staticMethod = (method.getModifiers() & Modifier.STATIC) == Modifier.STATIC;
+            if(staticMethod == is_static) {
+                OtherOption option = method.getAnnotation(OtherOption.class);
+                if(option != null) {
+                    String[] names = option.names();
+                    for(String name : names) {
+                        if(name.equals(command)) {
+                            return method;
+                        }
                     }
-                    mLastArgs = field;
                 }
             }
         }
+        return null;
     }
-    private Field getField(String name) {
-        Field result = optionFieldsMap.get(name);
-        if(result == null) {
-            result = choiceOptionFieldsMap.get(name);
+    private Method getOnOptionSelectedMethod(boolean is_static) {
+        List<Method> methodList = ReflectionUtil.listMethods(mainCommandClass);
+        for(Method method : methodList) {
+            boolean staticMethod = (method.getModifiers() & Modifier.STATIC) == Modifier.STATIC;
+            if(staticMethod == is_static) {
+                OnOptionSelected option = method.getAnnotation(OnOptionSelected.class);
+                if(option != null) {
+                    return method;
+                }
+            }
         }
-        return result;
+        if(is_static) {
+            throw new RuntimeException("No static method annotated with OnOptionSelected in class: '" + mainCommandClass + "'");
+        }
+        throw new RuntimeException("No instance method annotated with OnOptionSelected in class: '" + mainCommandClass + "'");
     }
-    public static <T> T parse(Class<T> type, String[] args) {
-        CommandParser parser = new CommandParser(args);
-        return parser.parse(type);
-    }
-    public static void parse(Object obj, String[] args) {
-        CommandParser parser = new CommandParser(args);
-        parser.parse(obj);
-    }
+
 }

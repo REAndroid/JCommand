@@ -129,20 +129,13 @@ public class TwoColumnTable {
     }
     public void addSeparator() {
         if(drawBorder && !hasSeparatorRow()) {
+
+            boolean first = mSpreadSheet.size() == 0;
+
             SpreadSheet.Row row = addRow("", "");
             SpreadSheet.SeparatorCells mergedCells = row.asSeparator();
-            mergedCells.setBorderLeft("|");
-            mergedCells.setBorderRight("_|");
-            mergedCells.setHorizontalIndent(SpreadSheet.INDENT_LEFT);
-            mergedCells.setVerticalIndent(SpreadSheet.INDENT_TOP);
-        }
-    }
-    public void addFirstSeparator() {
-        if(drawBorder && !hasSeparatorRow()) {
-            SpreadSheet.Row row = addRow("", "");
-            SpreadSheet.SeparatorCells mergedCells = row.asSeparator();
-            mergedCells.setBorderLeft(" ");
-            mergedCells.setBorderRight(" ");
+            mergedCells.setBorderLeft(first ? " " : "|");
+            mergedCells.setBorderRight(first ? " " : "_|");
             mergedCells.setHorizontalIndent(SpreadSheet.INDENT_LEFT);
             mergedCells.setVerticalIndent(SpreadSheet.INDENT_TOP);
         }

@@ -39,6 +39,9 @@ javadoc {
 jar {
     exclude('zorg/**')
 }
+test {
+    testLogging.showStandardStreams = true
+}
 
 
 

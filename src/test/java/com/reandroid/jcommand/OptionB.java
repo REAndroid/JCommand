@@ -8,8 +8,8 @@ import java.io.File;
 import java.util.List;
 
 @CommandOptions(
-        name = "d",
-        alternates = {"decode"},
+        name = "b",
+        alternates = {"build"},
         description = "Description about command",
         usage = "d [options ...] , [flags ...]",
         examples = {
@@ -17,7 +17,7 @@ import java.util.List;
                 "java -jar myJar.jar -o /out/path"
         }
 )
-public class OptionA extends BaseOption {
+public class OptionB extends BaseOption {
 
     @OptionArg(name = "-i", alternates = {"--input-path"}, description = "Input file path")
     public String mInput;

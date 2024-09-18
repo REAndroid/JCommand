@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class CommandParserTest {
+public class SubCommandParserTest {
 
     @Test
     public void testParser() {
@@ -36,7 +36,7 @@ public class CommandParserTest {
                 "-s", "two"
         };
 
-        OptionA optionA = CommandParser.parse(OptionA.class, args);
+        OptionA optionA = SubCommandParser.parse(OptionA.class, args);
 
         Assert.assertNotNull(optionA);
 
@@ -75,7 +75,7 @@ public class CommandParserTest {
         String[] args = new String[] {
                 "-xyz", "xyz value"
         };
-        CommandParser.parse(OptionA.class, args);
+        SubCommandParser.parse(OptionA.class, args);
     }
 
     @Test(expected = DuplicateOptionException.class)
@@ -84,7 +84,7 @@ public class CommandParserTest {
                 "-i", "path1",
                 "--input-path", "path2",
         };
-        CommandParser.parse(OptionA.class, args);
+        SubCommandParser.parse(OptionA.class, args);
     }
 
     @Test(expected = CommandFormatException.class)
@@ -92,7 +92,7 @@ public class CommandParserTest {
         String[] args = new String[] {
                 "-max", "12xyz"
         };
-        CommandParser.parse(OptionA.class, args);
+        SubCommandParser.parse(OptionA.class, args);
     }
 
     @Test(expected = MissingValueException.class)
@@ -100,6 +100,6 @@ public class CommandParserTest {
         String[] args = new String[] {
                 "-i"
         };
-        CommandParser.parse(OptionA.class, args);
+        SubCommandParser.parse(OptionA.class, args);
     }
 }

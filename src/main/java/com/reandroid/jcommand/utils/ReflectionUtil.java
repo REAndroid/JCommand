@@ -18,6 +18,7 @@ package com.reandroid.jcommand.utils;
 import com.reandroid.jcommand.annotations.ChoiceArg;
 import com.reandroid.jcommand.annotations.LastArgs;
 import com.reandroid.jcommand.annotations.OptionArg;
+import com.reandroid.jcommand.annotations.OtherOption;
 import com.reandroid.jcommand.exceptions.CommandFormatException;
 
 import java.io.File;
@@ -294,6 +295,17 @@ public class ReflectionUtil {
         }
         return optionArgList;
     }
+    public static List<OtherOption> listOtherOptions(Class<?> clazz) {
+        List<Method> methodList = listMethods(clazz);
+        List<OtherOption> results = new ArrayList<>();
+        for(Method method : methodList) {
+            OtherOption option = method.getAnnotation(OtherOption.class);
+            if (option != null) {
+                results.add(option);
+            }
+        }
+        return results;
+    }
     public static List<ChoiceArg> listChoiceArgs(Class<?> clazz) {
         List<Field> fieldList = listInstanceFields(clazz);
         List<ChoiceArg> choiceArgs = new ArrayList<>();
@@ -332,6 +344,23 @@ public class ReflectionUtil {
             }
         }
         listInstanceFields(clazz.getSuperclass(), results);
+    }
+    public static List<Method> listMethods(Class<?> clazz) {
+        List<Method> results = new ArrayList<>();
+        listMethods(clazz, results);
+        return results;
+    }
+    private static void listMethods(Class<?> clazz, List<Method> results) {
+        if(clazz == null || Object.class.equals(clazz)) {
+            return;
+        }
+        Method[] methods = clazz.getDeclaredMethods();
+        for(Method method : methods) {
+            if(method != null) {
+                results.add(method);
+            }
+        }
+        listMethods(clazz.getSuperclass(), results);
     }
 
     public static<T> T createNew(Class<T> type) {
