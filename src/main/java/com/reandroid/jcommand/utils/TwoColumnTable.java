@@ -140,4 +140,17 @@ public class TwoColumnTable {
             mergedCells.setVerticalIndent(SpreadSheet.INDENT_TOP);
         }
     }
+    public void addLine() {
+        if(!hasSeparatorRow()) {
+
+            boolean add_vertical = drawBorder && mSpreadSheet.size() != 0;
+
+            SpreadSheet.Row row = addRow("", "");
+            SpreadSheet.SeparatorCells mergedCells = row.asSeparator();
+            mergedCells.setBorderLeft(add_vertical ? "|" : " ");
+            mergedCells.setBorderRight(add_vertical ? "_|" : " ");
+            mergedCells.setHorizontalIndent(SpreadSheet.INDENT_LEFT);
+            mergedCells.setVerticalIndent(SpreadSheet.INDENT_TOP);
+        }
+    }
 }

@@ -88,6 +88,7 @@ public class MainProgramTest {
         OptionA optionA = (OptionA) mOption;
         Assert.assertEquals("/path/test", optionA.mInput);
         Assert.assertEquals(123456, optionA.mMaximum);
+        TestUtils.log(optionA.toString());
     }
     @Test
     public void testOptionA2() {

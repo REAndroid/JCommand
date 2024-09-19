@@ -20,6 +20,8 @@ import com.reandroid.jcommand.annotations.LastArgs;
 import com.reandroid.jcommand.annotations.OptionArg;
 import com.reandroid.jcommand.utils.CommandUtil;
 import com.reandroid.jcommand.utils.ReflectionUtil;
+import com.reandroid.jcommand.utils.SpreadSheet;
+import com.reandroid.jcommand.utils.TwoColumnTable;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -28,20 +30,44 @@ import java.util.List;
 
 public class OptionStringBuilder {
 
+    private final TwoColumnTable twoColumnTable;
+
     private final Object optionObject;
     private final List<Field> optionArgFieldsList;
     private Field mLastArgs;
 
     public OptionStringBuilder(Object optionObject) {
         this.optionObject = optionObject;
+        this.twoColumnTable = new TwoColumnTable();
         this.optionArgFieldsList = new ArrayList<>();
+        this.twoColumnTable.setColumnSeparator(" = ");
+    }
+
+
+    public void setMaxWidth(int maxWidth) {
+        getTable().setMaxWidth(maxWidth);
+    }
+    public void setTab2(String tab2) {
+        getTable().setTab2(tab2);
+    }
+    public void setColumnSeparator(String columnSeparator) {
+        getTable().setColumnSeparator(columnSeparator);
+    }
+    public void setDrawBorder(boolean headerSeparators) {
+        getTable().setDrawBorder(headerSeparators);
+    }
+
+    public TwoColumnTable getTable() {
+        return twoColumnTable;
     }
 
     public String buildTable() {
-        StringBuilder builder = new StringBuilder();
-        CommandUtil.printTwoColumns(builder, "", " = ", 10000 , buildTableRows());
-        builder.append("\n\n");
-        return builder.toString();
+        TwoColumnTable twoColumnTable = getTable();
+        twoColumnTable.clear();
+        buildTableRows();
+        twoColumnTable.getSpreadSheet().setIndent(0, SpreadSheet.INDENT_RIGHT);
+        SpreadSheet spreadSheet = twoColumnTable.buildTable();
+        return spreadSheet.toString();
     }
     public String buildCommandArg() {
         String[] array = buildArray(true);
@@ -55,13 +81,10 @@ public class OptionStringBuilder {
         }
         return builder.toString();
     }
-    public String[] toArray() {
-        return buildArray(false);
-    }
     @SuppressWarnings("unchecked")
-    public String[][] buildTableRows() {
+    private void buildTableRows() {
         listFields();
-        List<String[]> results = new ArrayList<>();
+        TwoColumnTable twoColumnTable = getTable();
         for(Field field : optionArgFieldsList) {
             String name = ReflectionUtil.getArgName(field);
             if(name == null) {
@@ -77,21 +100,15 @@ public class OptionStringBuilder {
                     if(o == null) {
                         continue;
                     }
-                    String[] pair = new String[2];
-                    pair[0] = name;
-                    pair[1] = CommandUtil.quoteString(o.toString());
-                    results.add(pair);
+                    twoColumnTable.addRow(name, CommandUtil.quoteString(o.toString()));
                 }
             } else {
                 if(!ReflectionUtil.isFlagArg(field) || Boolean.TRUE.equals(value)) {
-                    String[] pair = new String[2];
-                    pair[0] = name;
-                    pair[1] = CommandUtil.quoteString(value.toString());
-                    results.add(pair);
+                    twoColumnTable.addRow(name, CommandUtil.quoteString(value.toString()));
                 }
             }
         }
-        return results.toArray(new String[0][0]);
+        twoColumnTable.addLine();
     }
 
     @SuppressWarnings("unchecked")
