@@ -74,7 +74,8 @@ public class MainProgramTest {
         reset();
         CommandParser parser = new CommandParser(MainProgramTest.class);
         try {
-            parser.parse(this, "d", "-i", "/path/test", "-max", "123456");
+            parser.parse(this, "d", "-i", "/path/test", "-max", "123456",
+                    "-g", "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
         } catch (CommandException e) {
             throw new RuntimeException(e.getMessage(new ResourceStringsForTest()));
         }

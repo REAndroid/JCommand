@@ -821,6 +821,7 @@ public class SpreadSheet implements Iterable<SpreadSheet.Row> {
                 return length - i;
             }
         }
+        builder.append('\n');
         return 0;
     }
     public static String fillSpace(int amount) {
