@@ -97,11 +97,9 @@ public class CommandParser {
             if(staticMethod == is_static) {
                 OtherOption option = method.getAnnotation(OtherOption.class);
                 if(option != null) {
-                    String[] names = option.names();
-                    for(String name : names) {
-                        if(name.equals(command)) {
-                            return method;
-                        }
+                    if (contains(command, option.names()) ||
+                            contains(command, option.alternates())) {
+                        return method;
                     }
                 }
             }
@@ -123,6 +121,15 @@ public class CommandParser {
             throw new RuntimeException("No static method annotated with OnOptionSelected in class: '" + mainCommandClass + "'");
         }
         throw new RuntimeException("No instance method annotated with OnOptionSelected in class: '" + mainCommandClass + "'");
+    }
+
+    private boolean contains(String command, String[] names) {
+        for(String name : names) {
+            if(name.equals(command)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

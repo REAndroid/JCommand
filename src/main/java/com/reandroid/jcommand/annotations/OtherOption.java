@@ -25,4 +25,5 @@ import java.lang.annotation.Target;
 public @interface OtherOption {
     String[] names();
     String description();
+    String[] alternates() default {};
 }
