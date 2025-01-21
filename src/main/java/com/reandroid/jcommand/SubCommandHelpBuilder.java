@@ -59,6 +59,8 @@ public class SubCommandHelpBuilder extends HelpBuilder {
         appendOptionArgs(getFlagList(), CommandStrings.title_flags);
         appendExamples();
         twoColumnTable.addSeparator();
+        appendNotes();
+        twoColumnTable.addSeparator();
         return twoColumnTable.buildTable();
     }
     private void appendOptionArgs(List<OptionArg> optionArgList, String title) {
@@ -127,6 +129,26 @@ public class SubCommandHelpBuilder extends HelpBuilder {
         twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_example));
         for(int i = 0; i < length; i++) {
             String col1 = (i + 1) + ")  " + stringResource.getString(examples[i]);
+            twoColumnTable.addMergedRowTabbed(col1);
+        }
+    }
+    private void appendNotes() {
+        CommandOptions commandOptions = this.commandOptions;
+        if (commandOptions == null) {
+            return;
+        }
+        String[] notes = commandOptions.notes();
+        int length = notes.length;
+        if(length == 0) {
+            return;
+        }
+        CommandStringResource stringResource = getStringResource();
+        TwoColumnTable twoColumnTable = getTable();
+
+        twoColumnTable.addSeparator();
+        twoColumnTable.addMergedRow(stringResource.getString(CommandStrings.title_notes));
+        for (int i = 0; i < length; i++) {
+            String col1 = (i + 1) + ")  " + stringResource.getString(notes[i]);
             twoColumnTable.addMergedRowTabbed(col1);
         }
     }

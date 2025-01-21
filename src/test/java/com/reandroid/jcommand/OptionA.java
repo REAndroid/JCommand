@@ -15,6 +15,10 @@ import java.util.List;
         examples = {
                 "java -jar myJar.jar -i /in/path",
                 "java -jar myJar.jar -o /out/path"
+        },
+        notes = {
+                "Additional notes about command - 1",
+                "Additional notes about command - 2"
         }
 )
 public class OptionA extends BaseOption {

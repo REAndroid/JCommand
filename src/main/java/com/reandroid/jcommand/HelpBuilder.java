@@ -110,6 +110,7 @@ public abstract class HelpBuilder {
         map.put(CommandStrings.title_flags, "Flags:");
         map.put(CommandStrings.title_usage, "Usage:");
         map.put(CommandStrings.title_example, "Examples:");
+        map.put(CommandStrings.title_notes, "Notes:");
         return resourceName -> {
             String str = map.get(resourceName);
             if(str == null) {

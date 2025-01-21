@@ -28,4 +28,5 @@ public @interface CommandOptions {
     String description();
     String usage() default "";
     String[] examples() default {};
+    String[] notes() default {};
 }

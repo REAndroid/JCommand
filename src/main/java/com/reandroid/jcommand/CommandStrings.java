@@ -24,6 +24,7 @@ public class CommandStrings {
     public static final String title_flags = CommandUtil.of("title_flags");
     public static final String title_usage = CommandUtil.of("title_usage");
     public static final String title_example = CommandUtil.of("title_example");
+    public static final String title_notes = CommandUtil.of("title_notes");
     public static final String invalid_type_format = CommandUtil.of("invalid_type_format");
     public static final String missing_value_exception = CommandUtil.of("missing_value_exception");
     public static final String unknown_option_exception = CommandUtil.of("unknown_option_exception");
